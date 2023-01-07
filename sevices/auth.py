@@ -6,11 +6,11 @@ from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
-from .config import get_db
-from .models import User
+from db.config import get_db
+from db.models import User
 from jose import jwt, JWTError
 
-from .schemas import TokenData
+from db.schemas import TokenData
 
 load_dotenv()
 
@@ -47,7 +47,7 @@ def create_token(sub: str):
 	"""Создает JWT токен"""
 	token_type = "access_token"
 	lifetime = timedelta(minutes=ACCESS)
-	payload = {'token': token_type, 'exp': datetime.utcnow() + lifetime, 'sub': sub}
+	payload = {'token': token_type, 'exp': datetime.now() + lifetime, 'sub': sub}
 
 	return jwt.encode(payload, SECRET, ALGORITHM)
 
@@ -69,7 +69,7 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
 		token_data = TokenData(username=username)
 	except JWTError:
 		raise credentials_exception
-	user = db.query(User).filter(User.email == token_data.username).first()
+	user = db.query(User).filter(User.username == token_data.username).first()
 	if user is None:
 		raise credentials_exception
 

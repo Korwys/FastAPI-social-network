@@ -10,11 +10,16 @@ class PostCreate(PostBase):
 	...
 
 
+class PostUpdate(PostBase):
+	title: str | None
+	description: str | None
+
+
 class PostInDB(PostBase):
 	id: int
-	likes: int
-	dislikes: int
-	owner_id: int
+	likes: int | None
+	dislikes: int | None
+	author: int
 
 	class Config:
 		orm_mode = True
