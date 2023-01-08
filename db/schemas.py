@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, validator
 
 
 class PostBase(BaseModel):
@@ -32,6 +32,24 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
 	password: str
+
+	@validator('username')
+	def check_on_numbers_and_letters(cls, value: str):
+		if not value.isalnum():
+			raise ValueError('Username must contains only letters or/and digits.')
+		elif len(value) < 5:
+			raise ValueError('Password must be longer than 5 characters')
+		else:
+			return value
+
+	@validator('password')
+	def check_password(cls, value):
+		if not value.isalnum():
+			raise ValueError('Password must contains only letters and digits.')
+		elif len(value) < 8:
+			raise ValueError('Password must be longer than 8 characters')
+		else:
+			return value
 
 
 class UserInDB(UserBase):

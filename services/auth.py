@@ -1,9 +1,11 @@
+import logging
 import os
 from datetime import timedelta, datetime
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
 from db.config import get_db
@@ -12,10 +14,10 @@ from jose import jwt, JWTError
 
 from db.schemas import TokenData
 
+logger = logging.getLogger('app.services.auth')
 load_dotenv()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
 
 ACCESS = int(os.getenv('ACCESS'))
@@ -39,8 +41,11 @@ def verify_user_password(user_credentials, db: Session = Depends(get_db)):
 
 def get_user_hashed_password_from_db(username: int, db: Session = Depends(get_db)):
 	"""Возвращает хэшированный пароль из БД"""
-	user = db.query(User).filter(User.username == username).first()
-	return user.hashed_password
+	try:
+		user = db.query(User).filter(User.username == username).first()
+		return user.hashed_password
+	except SQLAlchemyError as err:
+		logger.exception(err)
 
 
 def create_token(sub: str):
@@ -49,8 +54,10 @@ def create_token(sub: str):
 	lifetime = timedelta(minutes=ACCESS)
 	payload = {'token': token_type, 'exp': datetime.now() + lifetime, 'sub': sub}
 
-	return jwt.encode(payload, SECRET, ALGORITHM)
-
+	try:
+		return jwt.encode(payload, SECRET, ALGORITHM)
+	except JWTError as err:
+		logger.exception(err)
 
 def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
 	"""Декодирует JWT и если все ок, то возвращает текущего юзера"""
@@ -69,8 +76,8 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
 		token_data = TokenData(username=username)
 	except JWTError:
 		raise credentials_exception
+
 	user = db.query(User).filter(User.username == token_data.username).first()
 	if user is None:
 		raise credentials_exception
-
 	return user

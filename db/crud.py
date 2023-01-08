@@ -6,7 +6,7 @@ from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import DisconnectionError, SQLAlchemyError
 
-from sevices.auth import create_hashed_user_password
+from services.auth import create_hashed_user_password
 from db.models import User, Post
 from db.schemas import UserCreate, PostCreate, PostUpdate, UserInDB
 
@@ -14,6 +14,7 @@ logger = logging.getLogger('app.db.crud')
 
 
 def add_new_user_in_db(db: Session, obj_in: UserCreate):
+
 	new_data = obj_in.dict()
 	new_data.pop('password')
 	db_obj = User(**new_data)

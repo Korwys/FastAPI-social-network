@@ -8,10 +8,9 @@ class User(Base):
 	__tablename__ = "users"
 
 	id = Column(Integer, primary_key=True, index=True)
-	username = Column(String, unique=True)
-	email = Column(String, unique=True, index=True)
+	username = Column(String, unique=True, nullable=False)
+	email = Column(String, unique=True, nullable=False)
 	hashed_password = Column(String)
-
 
 
 class Post(Base):
@@ -23,7 +22,6 @@ class Post(Base):
 	likes = Column(Integer, nullable=True)
 	dislikes = Column(Integer, nullable=True)
 	author = Column(Integer, ForeignKey("users.id"))
-
 
 
 class Dislikes(Base):

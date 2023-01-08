@@ -8,7 +8,7 @@ from db.config import get_db
 from db.crud import add_new_user_in_db
 from db.models import User
 from db.schemas import Token, UserCreate, UserInDB
-from sevices.auth import verify_user_password, create_token
+from services.auth import verify_user_password, create_token
 
 router = fastapi.APIRouter()
 

@@ -5,7 +5,7 @@ from starlette import status
 from starlette.responses import JSONResponse
 
 from db.config import get_db
-from sevices.auth import get_current_user
+from services.auth import get_current_user
 
 from db.crud import add_new_post_in_db, fetch_all_posts_from_db, fetch_one_post, update_post, remove_post_from_db
 from db.models import Post
@@ -41,6 +41,4 @@ def delete_post(post_id: int, db: Session = Depends(get_db),
                 user: UserInDB = Depends(get_current_user)) -> JSONResponse:
 	return remove_post_from_db(db, post_id, user)
 
-# @router.post('/like/{post_id}', response_model=PostInDB, status_code=status.HTTP_201_CREATED)
-# def add_like(db: Session, post_id: int, user: UserInDB = Depends(get_current_user))-> Post:
-# 	pass
+
