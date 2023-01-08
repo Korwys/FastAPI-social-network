@@ -18,7 +18,7 @@ logger = logging.getLogger('app.services.auth')
 load_dotenv()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/users/login")
 
 ACCESS = int(os.getenv('ACCESS'))
 ALGORITHM = os.getenv('ALGORITHM')

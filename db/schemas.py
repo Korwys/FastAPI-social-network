@@ -64,3 +64,11 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
 	username: str | None
+
+
+class Like(BaseModel):
+	post_id: int
+
+
+class Dislike(BaseModel):
+	post_id: int

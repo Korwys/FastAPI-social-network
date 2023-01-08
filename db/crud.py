@@ -4,17 +4,16 @@ from typing import Dict, Any
 from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import DisconnectionError, SQLAlchemyError
+from sqlalchemy.exc import DisconnectionError, SQLAlchemyError, IntegrityError
 
 from services.auth import create_hashed_user_password
-from db.models import User, Post
+from db.models import User, Post, Likes, Dislikes
 from db.schemas import UserCreate, PostCreate, PostUpdate, UserInDB
 
 logger = logging.getLogger('app.db.crud')
 
 
-def add_new_user_in_db(db: Session, obj_in: UserCreate):
-
+def add_new_user_in_db(db: Session, obj_in: UserCreate) -> User:
 	new_data = obj_in.dict()
 	new_data.pop('password')
 	db_obj = User(**new_data)
@@ -59,7 +58,7 @@ def update_post(db: Session, db_obj: Post, obj_in: PostUpdate | Dict[str, Any]) 
 		logger.exception(err)
 
 
-def remove_post_from_db(db: Session, post_id: int, user: UserInDB):
+def remove_post_from_db(db: Session, post_id: int, user: UserInDB) -> Post:
 	post = fetch_one_post(db, post_id)
 	if post and post.author == user.id:
 		try:
@@ -89,3 +88,21 @@ def fetch_all_posts_from_db(db: Session, skip: int, limit: int) -> list[Post]:
 		return posts
 	except SQLAlchemyError as err:
 		logger.exception(err)
+
+
+def change_likes_or_dislikes(db: Session, post_id: int, user: UserInDB, model: Likes | Dislikes) -> None:
+	like = db.query(model).filter(model.post_id == post_id).first()
+	if like:
+		try:
+			db.delete(like)
+			db.commit()
+		except SQLAlchemyError as err:
+			logger.exception(err)
+	else:
+		obj_in = {"post_id": post_id, "like_author": user.id}
+		db_obj = model(**obj_in)
+		try:
+			db.add(db_obj)
+			db.commit()
+		except SQLAlchemyError as err:
+			logger.exception(err)

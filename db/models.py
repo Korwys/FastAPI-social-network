@@ -29,8 +29,7 @@ class Dislikes(Base):
 
 	id = Column(Integer, primary_key=True, index=True)
 	post_id = Column(Integer, ForeignKey('posts.id'))
-	post_owner = Column(Integer, ForeignKey('posts.author'))
-	dislike_author = Column(Integer, ForeignKey('users.id'), unique=True)
+	user = Column(Integer, ForeignKey('users.id'), unique=True)
 
 
 class Likes(Base):
@@ -38,5 +37,4 @@ class Likes(Base):
 
 	id = Column(Integer, primary_key=True, index=True)
 	post_id = Column(Integer, ForeignKey('posts.id'))
-	post_owner = Column(Integer, ForeignKey('posts.author'))
-	like_author = Column(Integer, ForeignKey('users.id'), unique=True)
+	user = Column(Integer, ForeignKey('users.id'), unique=True)
