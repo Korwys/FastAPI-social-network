@@ -1,6 +1,7 @@
 import logging
 
 from sqlalchemy import Column, ForeignKey, Integer, String, DDL, event, update, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import relationship, validates
 
 from .config import Base
@@ -23,8 +24,8 @@ class Post(Base):
 	id = Column(Integer, primary_key=True, index=True)
 	title = Column(String, nullable=False)
 	description = Column(String, nullable=False)
-	likes = Column(Integer, nullable=True)
-	dislikes = Column(Integer, nullable=True)
+	likes = Column(Integer, nullable=False)
+	dislikes = Column(Integer, nullable=False)
 	author = Column(Integer, ForeignKey("users.id"))
 
 
@@ -33,7 +34,7 @@ class Dislikes(Base):
 
 	id = Column(Integer, primary_key=True, index=True)
 	post_id = Column(Integer, ForeignKey('posts.id'))
-	user = Column(Integer, ForeignKey('users.id'), unique=True)
+	user = Column(Integer, ForeignKey('users.id'))
 
 
 class Likes(Base):
@@ -41,7 +42,7 @@ class Likes(Base):
 
 	id = Column(Integer, primary_key=True, index=True)
 	post_id = Column(Integer, ForeignKey('posts.id'))
-	user = Column(Integer, ForeignKey('users.id'), unique=True)
+	user = Column(Integer, ForeignKey('users.id'))
 
 
 @event.listens_for(Likes, "after_insert")
@@ -49,7 +50,7 @@ def plus_like(mapper, connection, target):
 	try:
 		post = Post
 		connection.execute(update(post).where(Post.id == target.post_id).values(likes=post.likes + 1))
-	except Exception as err:
+	except SQLAlchemyError as err:
 		logger.exception(err)
 
 
@@ -57,8 +58,8 @@ def plus_like(mapper, connection, target):
 def minus_like(mapper, connection, target):
 	try:
 		post = Post
-		connection.execute(update(post).where(Post.id == target.post_id).values(likes=post.likes + 1))
-	except Exception as err:
+		connection.execute(update(post).where(Post.id == target.post_id).values(likes=post.likes - 1))
+	except SQLAlchemyError as err:
 		logger.exception(err)
 
 
@@ -67,7 +68,7 @@ def plus_dislike(mapper, connection, target):
 	try:
 		post = Post
 		connection.execute(update(post).where(Post.id == target.post_id).values(dislikes=post.dislikes + 1))
-	except Exception as err:
+	except SQLAlchemyError as err:
 		logger.exception(err)
 
 
@@ -75,6 +76,6 @@ def plus_dislike(mapper, connection, target):
 def minus_dislike(mapper, connection, target):
 	try:
 		post = Post
-		connection.execute(update(post).where(Post.id == target.post_id).values(dislikes=post.dislikes + 1))
-	except Exception as err:
+		connection.execute(update(post).where(Post.id == target.post_id).values(dislikes=post.dislikes - 1))
+	except SQLAlchemyError as err:
 		logger.exception(err)

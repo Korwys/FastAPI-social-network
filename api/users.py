@@ -1,8 +1,8 @@
 import fastapi
 from fastapi import Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import Json
 from sqlalchemy.orm import Session
+from starlette import status
 
 from db.config import get_db
 from db.crud import add_new_user_in_db
@@ -13,14 +13,14 @@ from services.auth import verify_user_password, create_token
 router = fastapi.APIRouter()
 
 
-@router.post("/singup", response_model=UserInDB)
+@router.post("/singup", response_model=UserInDB, status_code=status.HTTP_201_CREATED)
 async def create_user(obj_in: UserCreate, db: Session = Depends(get_db)) -> User:
 	new_user = add_new_user_in_db(db=db, obj_in=obj_in)
 	return new_user
 
 
-@router.post('/login', response_model=Token)
-def login(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()) -> Json:
+@router.post('/login', response_model=Token, status_code=status.HTTP_200_OK)
+def login(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()) -> dict:
 	username = db.query(User).where(User.username == form_data.username)
 	if not username:
 		raise HTTPException(status_code=401, detail='Bad credentials')

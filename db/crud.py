@@ -1,17 +1,20 @@
 import logging
 from typing import Dict, Any
 
+import redis as redis
 from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import DisconnectionError, SQLAlchemyError, IntegrityError
+from sqlalchemy.exc import SQLAlchemyError
 
 from services.auth import create_hashed_user_password
-from db.models import User, Post, Likes, Dislikes
+from db.models import User, Post
 from db.schemas import UserCreate, PostCreate, PostUpdate, UserInDB
 
 logger = logging.getLogger('app.db.crud')
+
+redis = redis.Redis(host='localhost', port=6379, db=0)
 
 
 def add_new_user_in_db(db: Session, obj_in: UserCreate) -> User:
@@ -30,6 +33,8 @@ def add_new_user_in_db(db: Session, obj_in: UserCreate) -> User:
 def add_new_post_in_db(db: Session, obj_in: PostCreate, user) -> Post:
 	obj_in = obj_in.dict()
 	obj_in['author'] = user.id
+	obj_in['likes'] = 0
+	obj_in['dislikes'] = 0
 	db_obj = Post(**obj_in)
 	try:
 		db.add(db_obj)
@@ -93,7 +98,7 @@ def fetch_all_posts_from_db(db: Session, skip: int, limit: int) -> list[Post]:
 
 def change_likes_or_dislikes(db: Session, post_id: int, user: UserInDB, model) -> None:
 	like = db.query(model).filter(and_(model.post_id == post_id, model.user == user.id)).first()
-	if like and like.user == user.id:
+	if like:
 		try:
 			db.delete(like)
 			db.commit()
@@ -107,3 +112,11 @@ def change_likes_or_dislikes(db: Session, post_id: int, user: UserInDB, model) -
 			db.commit()
 		except SQLAlchemyError as err:
 			logger.exception(err)
+
+
+def check_post_author(db: Session, post_id: int, user: UserInDB) -> bool:
+	owner = db.query(Post).filter(and_(Post.author == user.id, Post.id == post_id)).first()
+	if owner:
+		return False
+	else:
+		return True
