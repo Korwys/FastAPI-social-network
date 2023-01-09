@@ -2,7 +2,6 @@ import fastapi
 from fastapi import Depends
 from sqlalchemy.orm import Session
 from starlette import status
-from starlette.responses import JSONResponse
 
 from db.config import get_db
 from services.auth import get_current_user
@@ -38,7 +37,5 @@ def edit_post(post_id: int, obj_in: PostUpdate, db: Session = Depends(get_db)
 
 @router.delete('/{post_id}', response_model=PostInDB, status_code=status.HTTP_200_OK)
 def delete_post(post_id: int, db: Session = Depends(get_db),
-                user: UserInDB = Depends(get_current_user)) -> JSONResponse:
+                user: UserInDB = Depends(get_current_user)) -> Post:
 	return remove_post_from_db(db, post_id, user)
-
-

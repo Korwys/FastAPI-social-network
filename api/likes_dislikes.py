@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 
 from db.config import get_db
 from db.crud import change_likes_or_dislikes, check_post_author
-from db.models import Likes
+from db.models import Likes, Dislikes
 from db.schemas import UserInDB
 from services.auth import get_current_user
 
@@ -23,6 +23,6 @@ def add_or_remove_like(post_id: int, db: Session = Depends(get_db), user: UserIn
 def add_or_remove_dislike(post_id: int, db: Session = Depends(get_db),
                           user: UserInDB = Depends(get_current_user)) -> None:
 	if check_post_author(db, post_id, user):
-		change_likes_or_dislikes(db, post_id, user, model=Likes)
+		change_likes_or_dislikes(db, post_id, user, model=Dislikes)
 	else:
 		raise HTTPException(status_code=400, detail="You сan't like or dislike your own post")

@@ -4,6 +4,7 @@ from typing import Dict, Any
 import redis as redis
 from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
+from redis.exceptions import RedisError
 from sqlalchemy import and_
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import SQLAlchemyError
@@ -28,6 +29,10 @@ def add_new_user_in_db(db: Session, obj_in: UserCreate) -> User:
 		return db_obj
 	except SQLAlchemyError as err:
 		logger.exception(err)
+
+
+def fetch_user_from_db(db: Session, data):
+	return db.query(User).where(User.username == data.username)
 
 
 def add_new_post_in_db(db: Session, obj_in: PostCreate, user) -> Post:
@@ -67,6 +72,12 @@ def update_post(db: Session, db_obj: Post, obj_in: PostUpdate | Dict[str, Any]) 
 def remove_post_from_db(db: Session, post_id: int, user: UserInDB) -> Post:
 	post = fetch_one_post(db, post_id)
 	if post and post.author == user.id:
+
+		try:
+			redis.delete(post_id)
+		except RedisError as err:
+			logger.error(msg=err)
+
 		try:
 			db.delete(post)
 			db.commit()
@@ -125,47 +136,54 @@ def check_post_author(db: Session, post_id: int, user: UserInDB) -> bool:
 		return True
 
 
-def redis_cache_change_values(key: int, status=None, table=None):
+def redis_cache_change_values(key: int, status=None, table=None) -> None:
 	if table == 'likes' and status == 'Inc':
-		response = redis.hgetall(key)
-		if response:
-			value = response[table]
-			new_value = value + 1
-			redis.hset(key, table, new_value)
-		else:
-			redis.hset(key, mapping={'likes': 1, 'dislikes': 0})
+		increment_likes_or_dislikes_in_redis_cache(key, table, status)
 	elif table == 'likes' and status == 'Dec':
-		response = redis.hgetall(key)
-		if response:
-			value = response[table]
-			new_value = value - 1
-			redis.hset(key, table, new_value)
-		else:
-			redis.hset(key, mapping={'likes': 0, 'dislikes': 0})
+		decrement_likes_or_dislikes_in_redis_cache(key, table, status)
 
 	if table == 'dislikes' and status == 'Inc':
-		response = redis.hgetall(key)
-		if response:
-			value = response[table]
-			new_value = value + 1
-			redis.hset(key, table, new_value)
-		else:
-			redis.hset(key, mapping={'likes': 0, 'dislikes': 1})
+		increment_likes_or_dislikes_in_redis_cache(key, table, status)
 	elif table == 'dislikes' and status == 'Dec':
+		decrement_likes_or_dislikes_in_redis_cache(key, table, status)
+
+
+def decrement_likes_or_dislikes_in_redis_cache(key: int, table: str, status: str) -> None:
+	try:
 		response = redis.hgetall(key)
-		if response:
-			value = response[table]
-			new_value = value - 1
+		if response and status == 'Inc':
+			cache_value = redis.hget(key, table.encode())
+			new_value = int(cache_value.decode()) + 1
 			redis.hset(key, table, new_value)
+		elif response and status == 'Dec':
+			cache_value = redis.hget(key, table.encode())
+			if int(cache_value.decode()) > 0:
+				new_value = int(cache_value.decode()) - 1
+				redis.hset(key, table, new_value)
+			else:
+				redis.hset(key, table, 0)
 		else:
 			redis.hset(key, mapping={'likes': 0, 'dislikes': 0})
+	except Exception as err:
+		logger.exception(err)
 
 
-def increment_likes_or_dislikes(key, table):
-	response = redis.hgetall(key)
-	if response:
-		value = response[table]
-		new_value = value - 1
-		redis.hset(key, table, new_value)
-	else:
-		redis.hset(key, mapping={'likes': 0, 'dislikes': 0})
+def increment_likes_or_dislikes_in_redis_cache(key: int, table: str, status: str) -> None:
+	try:
+		response = redis.hgetall(key)
+		if response and status == 'Inc':
+			cache_value = redis.hget(key, table.encode())
+			new_value = int(cache_value.decode()) + 1
+			redis.hset(key, table, new_value)
+		elif response and status == 'Dec':
+			cache_value = redis.hget(key, table.encode())
+			if int(cache_value.decode()) > 0:
+				new_value = int(cache_value.decode()) - 1
+				redis.hset(key, table, new_value)
+			else:
+				redis.hset(key, table, 0)
+		else:
+			redis.hset(key, mapping={'likes': 0, 'dislikes': 0})
+			redis.hset(key, table, 1)
+	except Exception as err:
+		logger.exception(err)

@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from starlette import status
 
 from db.config import get_db
-from db.crud import add_new_user_in_db
+from db.crud import add_new_user_in_db, fetch_user_from_db
 from db.models import User
 from db.schemas import Token, UserCreate, UserInDB
 from services.auth import verify_user_password, create_token
@@ -21,7 +21,7 @@ async def create_user(obj_in: UserCreate, db: Session = Depends(get_db)) -> User
 
 @router.post('/login', response_model=Token, status_code=status.HTTP_200_OK)
 def login(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()) -> dict:
-	username = db.query(User).where(User.username == form_data.username)
+	username = fetch_user_from_db(db, form_data)
 	if not username:
 		raise HTTPException(status_code=401, detail='Bad credentials')
 	user_password = verify_user_password(db=db, user_credentials=form_data)
