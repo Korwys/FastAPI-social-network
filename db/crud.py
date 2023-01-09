@@ -74,7 +74,8 @@ def remove_post_from_db(db: Session, post_id: int, user: UserInDB) -> Post:
 		except SQLAlchemyError as err:
 			logger.exception(err)
 	else:
-		raise HTTPException(status_code=400, detail=f"Пост с таким Id отсутсвует или нет прав на удаление")
+		raise HTTPException(status_code=400,
+		                    detail=f"Post with ID-{post_id} does not exist OR You don't have permissions on delete")
 
 
 def fetch_one_post(db: Session, post_id: int) -> Post:
@@ -83,7 +84,7 @@ def fetch_one_post(db: Session, post_id: int) -> Post:
 		if post:
 			return post
 		else:
-			raise HTTPException(status_code=400, detail=f"Пост с таким Id отсутсвует")
+			raise HTTPException(status_code=400, detail=f"Post with ID-{post_id} does not exist")
 	except SQLAlchemyError as err:
 		logger.exception(err)
 
@@ -99,12 +100,14 @@ def fetch_all_posts_from_db(db: Session, skip: int, limit: int) -> list[Post]:
 def change_likes_or_dislikes(db: Session, post_id: int, user: UserInDB, model) -> None:
 	like = db.query(model).filter(and_(model.post_id == post_id, model.user == user.id)).first()
 	if like:
+		redis_cache_change_values(key=post_id, status='Dec', table=model.__tablename__)
 		try:
 			db.delete(like)
 			db.commit()
 		except SQLAlchemyError as err:
 			logger.exception(err)
 	else:
+		redis_cache_change_values(key=post_id, status='Inc', table=model.__tablename__)
 		obj_in = {"post_id": post_id, "user": user.id}
 		db_obj = model(**obj_in)
 		try:
@@ -120,3 +123,49 @@ def check_post_author(db: Session, post_id: int, user: UserInDB) -> bool:
 		return False
 	else:
 		return True
+
+
+def redis_cache_change_values(key: int, status=None, table=None):
+	if table == 'likes' and status == 'Inc':
+		response = redis.hgetall(key)
+		if response:
+			value = response[table]
+			new_value = value + 1
+			redis.hset(key, table, new_value)
+		else:
+			redis.hset(key, mapping={'likes': 1, 'dislikes': 0})
+	elif table == 'likes' and status == 'Dec':
+		response = redis.hgetall(key)
+		if response:
+			value = response[table]
+			new_value = value - 1
+			redis.hset(key, table, new_value)
+		else:
+			redis.hset(key, mapping={'likes': 0, 'dislikes': 0})
+
+	if table == 'dislikes' and status == 'Inc':
+		response = redis.hgetall(key)
+		if response:
+			value = response[table]
+			new_value = value + 1
+			redis.hset(key, table, new_value)
+		else:
+			redis.hset(key, mapping={'likes': 0, 'dislikes': 1})
+	elif table == 'dislikes' and status == 'Dec':
+		response = redis.hgetall(key)
+		if response:
+			value = response[table]
+			new_value = value - 1
+			redis.hset(key, table, new_value)
+		else:
+			redis.hset(key, mapping={'likes': 0, 'dislikes': 0})
+
+
+def increment_likes_or_dislikes(key, table):
+	response = redis.hgetall(key)
+	if response:
+		value = response[table]
+		new_value = value - 1
+		redis.hset(key, table, new_value)
+	else:
+		redis.hset(key, mapping={'likes': 0, 'dislikes': 0})
