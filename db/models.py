@@ -1,7 +1,11 @@
-from sqlalchemy import Column, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
+import logging
+
+from sqlalchemy import Column, ForeignKey, Integer, String, DDL, event, update, text
+from sqlalchemy.orm import relationship, validates
 
 from .config import Base
+
+logger = logging.getLogger('app.db.models')
 
 
 class User(Base):
@@ -38,3 +42,39 @@ class Likes(Base):
 	id = Column(Integer, primary_key=True, index=True)
 	post_id = Column(Integer, ForeignKey('posts.id'))
 	user = Column(Integer, ForeignKey('users.id'), unique=True)
+
+
+@event.listens_for(Likes, "after_insert")
+def plus_like(mapper, connection, target):
+	try:
+		post = Post
+		connection.execute(update(post).where(Post.id == target.post_id).values(likes=post.likes + 1))
+	except Exception as err:
+		logger.exception(err)
+
+
+@event.listens_for(Likes, "before_delete")
+def minus_like(mapper, connection, target):
+	try:
+		post = Post
+		connection.execute(update(post).where(Post.id == target.post_id).values(likes=post.likes + 1))
+	except Exception as err:
+		logger.exception(err)
+
+
+@event.listens_for(Dislikes, "after_insert")
+def plus_dislike(mapper, connection, target):
+	try:
+		post = Post
+		connection.execute(update(post).where(Post.id == target.post_id).values(dislikes=post.dislikes + 1))
+	except Exception as err:
+		logger.exception(err)
+
+
+@event.listens_for(Dislikes, "before_delete")
+def minus_dislike(mapper, connection, target):
+	try:
+		post = Post
+		connection.execute(update(post).where(Post.id == target.post_id).values(dislikes=post.dislikes + 1))
+	except Exception as err:
+		logger.exception(err)

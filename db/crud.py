@@ -3,6 +3,7 @@ from typing import Dict, Any
 
 from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
+from sqlalchemy import and_
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import DisconnectionError, SQLAlchemyError, IntegrityError
 
@@ -90,16 +91,16 @@ def fetch_all_posts_from_db(db: Session, skip: int, limit: int) -> list[Post]:
 		logger.exception(err)
 
 
-def change_likes_or_dislikes(db: Session, post_id: int, user: UserInDB, model: Likes | Dislikes) -> None:
-	like = db.query(model).filter(model.post_id == post_id).first()
-	if like:
+def change_likes_or_dislikes(db: Session, post_id: int, user: UserInDB, model) -> None:
+	like = db.query(model).filter(and_(model.post_id == post_id, model.user == user.id)).first()
+	if like and like.user == user.id:
 		try:
 			db.delete(like)
 			db.commit()
 		except SQLAlchemyError as err:
 			logger.exception(err)
 	else:
-		obj_in = {"post_id": post_id, "like_author": user.id}
+		obj_in = {"post_id": post_id, "user": user.id}
 		db_obj = model(**obj_in)
 		try:
 			db.add(db_obj)
