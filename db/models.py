@@ -1,8 +1,7 @@
 import logging
 
-from sqlalchemy import Column, ForeignKey, Integer, String, DDL, event, update, text
+from sqlalchemy import Column, ForeignKey, Integer, String, event, update, Text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import relationship, validates
 
 from .config import Base
 
@@ -22,8 +21,8 @@ class Post(Base):
 	__tablename__ = "posts"
 
 	id = Column(Integer, primary_key=True, index=True)
-	title = Column(String, nullable=False)
-	description = Column(String, nullable=False)
+	title = Column(String(150), nullable=False)
+	description = Column(Text, nullable=False)
 	likes = Column(Integer, nullable=False)
 	dislikes = Column(Integer, nullable=False)
 	author = Column(Integer, ForeignKey("users.id"))

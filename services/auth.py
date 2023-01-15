@@ -14,70 +14,68 @@ from jose import jwt, JWTError
 
 from db.schemas import TokenData
 
-logger = logging.getLogger('app.services.auth')
 load_dotenv()
+
+logger = logging.getLogger('app.services.auth')
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/users/login")
 
-ACCESS = int(os.getenv('ACCESS'))
-ALGORITHM = os.getenv('ALGORITHM')
-SECRET = os.getenv('SECRET')
-
 
 def create_hashed_user_password(password: str) -> str:
-	"""Хэширует пароль"""
-	hashed_password = pwd_context.hash(password)
-	return hashed_password
+    """Хэширует пароль"""
+    hashed_password = pwd_context.hash(password)
+    return hashed_password
 
 
 def verify_user_password(user_credentials, db: Session = Depends(get_db)):
-	""" Сравнивает пароль который юзер ввел при входе с тем хэшированным паролем в базе"""
-	hashed_pass = get_user_hashed_password_from_db(username=user_credentials.username, db=db)
-	if not pwd_context.verify(user_credentials.password, hashed_pass):
-		raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Bad Credentials')
-	return user_credentials
+    """ Сравнивает пароль который юзер ввел при входе с тем хэшированным паролем в базе"""
+    hashed_pass = get_user_hashed_password_from_db(username=user_credentials.username, db=db)
+    if not pwd_context.verify(user_credentials.password, hashed_pass):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Bad Credentials')
+    return user_credentials
 
 
 def get_user_hashed_password_from_db(username: int, db: Session = Depends(get_db)):
-	"""Возвращает хэшированный пароль из БД"""
-	try:
-		user = db.query(User).filter(User.username == username).first()
-		return user.hashed_password
-	except SQLAlchemyError as err:
-		logger.exception(err)
+    """Возвращает хэшированный пароль из БД"""
+    try:
+        user = db.query(User).filter(User.username == username).first()
+        return user.hashed_password
+    except SQLAlchemyError as err:
+        logger.exception(err)
 
 
 def create_token(sub: str):
-	"""Создает JWT токен"""
-	token_type = "access_token"
-	lifetime = timedelta(minutes=ACCESS)
-	payload = {'token': token_type, 'exp': datetime.now() + lifetime, 'sub': sub}
+    """Создает JWT токен"""
+    token_type = "access_token"
+    lifetime = timedelta(minutes=int(os.getenv('ACCESS')))
+    payload = {'token': token_type, 'exp': datetime.now() + lifetime, 'sub': sub}
 
-	try:
-		return jwt.encode(payload, SECRET, ALGORITHM)
-	except JWTError as err:
-		logger.exception(err)
+    try:
+        return jwt.encode(payload, os.getenv('SECRET'), os.getenv('ALGORITHM'))
+    except JWTError as err:
+        logger.exception(err)
+
 
 def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_scheme)):
-	"""Декодирует JWT и если все ок, то возвращает текущего юзера"""
-	credentials_exception = HTTPException(
-		status_code=status.HTTP_401_UNAUTHORIZED,
-		detail="Could not validate credentials",
-		headers={"WWW-Authenticate": "Bearer"},
-	)
+    """Декодирует JWT и если все ок, то возвращает текущего юзера"""
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
 
-	try:
-		payload = jwt.decode(token, SECRET, algorithms=[ALGORITHM])
-		username = payload.get('sub')
-		if username is None:
-			raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate credentials')
+    try:
+        payload = jwt.decode(token, os.getenv('SECRET'), algorithms=[os.getenv('ALGORITHM')])
+        username = payload.get('sub')
+        if username is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate credentials')
 
-		token_data = TokenData(username=username)
-	except JWTError:
-		raise credentials_exception
+        token_data = TokenData(username=username)
+    except JWTError:
+        raise credentials_exception
 
-	user = db.query(User).filter(User.username == token_data.username).first()
-	if user is None:
-		raise credentials_exception
-	return user
+    user = db.query(User).filter(User.username == token_data.username).first()
+    if user is None:
+        raise credentials_exception
+    return user
