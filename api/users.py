@@ -1,5 +1,5 @@
 import fastapi
-from fastapi import Depends, HTTPException,Request
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from starlette import status
@@ -14,7 +14,7 @@ router = fastapi.APIRouter()
 
 
 @router.post("/singup", response_model=UserInDB, status_code=status.HTTP_201_CREATED)
-def create_user(request: Request, obj_in: UserCreate, db: Session = Depends(get_db)) -> User:
+async def create_user(request: Request, obj_in: UserCreate, db: Session = Depends(get_db)) -> User:
     """
     Create new user:
     - **username**: Username must contain only [a-z] or/and [A-Z] or/and [0-9] and length between 4-15.
@@ -22,12 +22,12 @@ def create_user(request: Request, obj_in: UserCreate, db: Session = Depends(get_
     - **email**: Must be valid
     - username and email **must be unique**
     """
-    new_user = add_new_user_in_db(db=db, obj_in=obj_in, request=request)
+    new_user = await add_new_user_in_db(db=db, obj_in=obj_in, request=request)
     return new_user
 
 
 @router.post('/login', response_model=Token, status_code=status.HTTP_200_OK)
-def login(request: Request, db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()) -> dict:
+def login(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()) -> dict:
     username = fetch_user_from_db(db, form_data)
     if not username:
         raise HTTPException(status_code=401, detail='Bad credentials')

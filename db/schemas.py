@@ -15,7 +15,7 @@ class PostCreate(PostBase):
     def check_title(cls, value: str):
         if len(value.strip()) == 0:
             raise ValueError('Title must contains letters or/and digits but not only spaces.')
-        elif len(value) == 0 or (value) > 150:
+        elif len(value) == 0 or len(value) > 150:
             raise ValueError('Title must be less than 150  but more than 0 characters')
         else:
             return value

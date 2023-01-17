@@ -10,7 +10,7 @@ from db.schemas import UserCreate
 
 load_dotenv()
 
-logger = logging.getLogger('app.services.user_verification')
+logger = logging.getLogger('app.services.validators')
 
 
 async def clearbit_new_user_score_checker(user_data: UserCreate, request: Request) -> str:
@@ -41,12 +41,13 @@ async def hunter_user_email_checker(user_data: UserCreate) -> str:
             async with session.get(url, params=params) as resp:
                 hunter_data = await resp.text()
                 clean_data = json.loads(hunter_data)
-                if clean_data['errors']:
+                email_validation_error = clean_data.get('errors')
+                if email_validation_error:
                     return 'Invalid email'
-
-                hunter_user_email_score = clean_data['data']['status']
-                if hunter_user_email_score in ['invalid', 'unknown']:
-                    return 'Invalid email'
+                else:
+                    hunter_user_email_score = clean_data['data']['status']
+                    if hunter_user_email_score in ['invalid', 'unknown']:
+                        return 'Invalid email'
 
         except aiohttp.ClientConnectorError as err:
             logger.exception(err)

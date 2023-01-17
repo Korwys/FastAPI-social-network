@@ -3,7 +3,6 @@ import logging.config
 
 import uvicorn
 from fastapi import FastAPI
-from starlette.staticfiles import StaticFiles
 
 from api import users, posts
 from db import models
@@ -24,7 +23,6 @@ logging.config.dictConfig(json.load(config_file))
 
 app.include_router(users.router, tags=['users'], prefix='/api/users')
 app.include_router(posts.router, tags=['posts'], prefix='/api/posts')
-# app.include_router(likes_dislikes.router, tags=['likes/dislikes'])
 
 if __name__ == '__main__':
     uvicorn.run(app, host='127.0.0.1', port=8000)
