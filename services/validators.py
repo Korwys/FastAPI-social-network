@@ -14,6 +14,7 @@ logger = logging.getLogger('app.services.validators')
 
 
 async def clearbit_new_user_score_checker(user_data: UserCreate, request: Request) -> str:
+    """Возвращает риск score от clearbit на основе указанного пользователем емейла и его айпи"""
     url = os.getenv('CLEARBIT_URL')
     api_key = os.getenv('CLEARBIT_API_KEY')
     headers = {'Authorization': f'Bearer {api_key}'}
@@ -32,6 +33,7 @@ async def clearbit_new_user_score_checker(user_data: UserCreate, request: Reques
 
 
 async def hunter_user_email_checker(user_data: UserCreate) -> str:
+    """Возвращает ответ если указанный при регистрации емейл невалидный на основе проверки сервиса Hunter.io"""
     url = os.getenv('HUNTER_URL')
     api_key = os.getenv('HUNTER_API_KEY')
     params = {'email': user_data.email, 'api_key': api_key}

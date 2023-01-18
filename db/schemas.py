@@ -7,12 +7,9 @@ class PostBase(BaseModel):
     title: str
     description: str
 
-
-class PostCreate(PostBase):
-    ...
-
     @validator('title')
     def check_title(cls, value: str):
+        """Валидация заголовка поста. Требования: длина более 0, но не более 150 знаков"""
         if len(value.strip()) == 0:
             raise ValueError('Title must contains letters or/and digits but not only spaces.')
         elif len(value) == 0 or len(value) > 150:
@@ -22,12 +19,16 @@ class PostCreate(PostBase):
 
     @validator('description')
     def check_description(cls, value):
+        """Валидация описания. Требования: длина более 0, но не более 5000 знаков"""
         if len(value.strip()) == 0:
             raise ValueError('Description must contains letters or/and digits, but not only spaces.')
         elif len(value) == 0 or len(value) > 5000:
             raise ValueError('Description must over 0 and less 5000 characters')
         else:
             return value
+
+class PostCreate(PostBase):
+    ...
 
 
 class PostUpdate(PostBase):
@@ -55,7 +56,7 @@ class UserCreate(UserBase):
 
     @validator('username')
     def check_username(cls, value: str) -> str:
-        """Вадиладация логина. Логин должен содержать буквы и/или цифры. длина от 5 до 15 символов."""
+        """Вадиладация логина. Логин должен содержать буквы и/или цифры. Длина от 5 до 15 символов."""
 
         pattern_username = re.compile(r'^[A-Za-z0-9]{4,15}$')
 
@@ -65,7 +66,7 @@ class UserCreate(UserBase):
 
     @validator('password')
     def check_password(cls, value: str) -> str:
-        """Валидация пароля. Пароль должен содеражать минимум 1 цифру, 1 заглавную букву и быть длинее 8 символов"""
+        """Валидация пароля. Пароль должен содержать минимум 1 цифру, 1 заглавную букву и быть более 8 символов"""
 
         pattern_password = re.compile(r'^(?=.*[0-9].*)(?=.*[a-z].*)(?=.*[A-Z].*)[0-9a-zA-Z]{8,}$')
 

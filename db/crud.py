@@ -21,6 +21,10 @@ redis = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_respons
 
 
 async def add_new_user_in_db(db: Session, obj_in: UserCreate, request: Request) -> User:
+    """Добавляет новую запись в БД при регистрации пользователя. Если проверка на уникальность логина или емайла не
+    проходит, то возвращает код 400 и описание проблемы. Если от clearbit приходит высокий score,
+    предполагается логика с капчей и подтверждением емейла,
+    но в данной версии эта фича(капча и подтверждение емейла) не реализована еще."""
     clearbit_user_score = await clearbit_new_user_score_checker(user_data=obj_in, request=request)
     hunter_status_score = await hunter_user_email_checker(user_data=obj_in)
     user_in_db = user_uniqueness_check(db=db, user_data=obj_in)
@@ -49,6 +53,7 @@ async def add_new_user_in_db(db: Session, obj_in: UserCreate, request: Request) 
 
 
 def user_uniqueness_check(db: Session, user_data: UserCreate):
+    """Возвращает из бд юзера(если он есть) для проверки на уникальность данных при регистрации"""
     try:
         user_query = select(User).where(or_(User.username == user_data.username, User.email == user_data.email))
         user_db_request = db.execute(user_query)
@@ -58,6 +63,7 @@ def user_uniqueness_check(db: Session, user_data: UserCreate):
 
 
 def fetch_user_from_db(db: Session, data):
+    """Возвращает юзера по указанному логину"""
     try:
         return db.query(User).where(User.username == data.username).first()
     except SQLAlchemyError as err:
@@ -65,9 +71,12 @@ def fetch_user_from_db(db: Session, data):
 
 
 def add_new_post_in_db(db: Session, obj_in: PostCreate, user: User) -> Post:
+    """Добавляет запись о новом посте"""
+
     obj_in = obj_in.dict()
     obj_in['author'] = user.id
     db_obj = Post(**obj_in)
+
     try:
         db.add(db_obj)
         db.commit()
@@ -77,6 +86,7 @@ def add_new_post_in_db(db: Session, obj_in: PostCreate, user: User) -> Post:
 
 
 def update_post(db: Session, post_id: int, obj_in: PostUpdate | Dict[str, Any]) -> Post:
+    """Апдейтит запись в бд у указанного поста. Если пост есть в кэше, то апдейтит данные и там"""
     db_obj = db.query(Post).filter(Post.id == post_id).first()
     obj_data = jsonable_encoder(db_obj)
 
@@ -105,6 +115,7 @@ def update_post(db: Session, post_id: int, obj_in: PostUpdate | Dict[str, Any]) 
 
 
 def remove_post_from_db(db: Session, post_id: int) -> JSONResponse:
+    """Удаляет запись из бд и кэша"""
     try:
         obj = delete(Post).where(Post.id == post_id)
         db.execute(obj)
@@ -121,6 +132,7 @@ def remove_post_from_db(db: Session, post_id: int) -> JSONResponse:
 
 
 def fetch_one_post(db: Session, post_id: int) -> Post:
+    """Забирает и возвращает пост из бд по указанному айди"""
     try:
         query = text(f"""
                     SELECT posts.id as post_id, posts.title as title, posts.description, posts.author,
