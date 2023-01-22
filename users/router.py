@@ -4,19 +4,19 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from starlette import status
 
-from db.config import get_db
-from db.crud import add_new_user_in_db, fetch_user_from_db
-from db.models import User
-from db.schemas import Token, UserCreate, UserInDB
-from services.auth import verify_user_password, create_token
+from config.db import get_db
+from users.models import User
+from users.schemas import UserInDB, UserCreate, Token
+from users.services import add_new_user_in_db, fetch_user_from_db
+from users.utils import verify_user_password, create_token
 
-router = fastapi.APIRouter()
+user_router = fastapi.APIRouter()
 
 
-@router.post("/singup", response_model=UserInDB, status_code=status.HTTP_201_CREATED)
+@user_router.post("/singup", response_model=UserInDB, status_code=status.HTTP_201_CREATED)
 async def create_user(request: Request, obj_in: UserCreate, db: Session = Depends(get_db)) -> User:
     """
-    Create new user:
+    Create new users:
     - **username**: Username must contain only [a-z] or/and [A-Z] or/and [0-9] and length between 4-15.
     - **password**:Password must contain at least 1 character [A-Z and 0-9] and min length 8 characters.
     - **email**: Must be valid
@@ -26,7 +26,7 @@ async def create_user(request: Request, obj_in: UserCreate, db: Session = Depend
     return new_user
 
 
-@router.post('/login', response_model=Token, status_code=status.HTTP_200_OK)
+@user_router.post('/login', response_model=Token, status_code=status.HTTP_200_OK)
 def login(db: Session = Depends(get_db), form_data: OAuth2PasswordRequestForm = Depends()) -> dict:
     username = fetch_user_from_db(db, form_data)
     if not username:

@@ -7,9 +7,9 @@ from redis.exceptions import RedisError
 from sqlalchemy.orm import Session
 from starlette.responses import JSONResponse
 
-from db.crud import fetch_one_post
-from db.models import Likes
-from db.schemas import UserInDB
+from posts.services import fetch_one_post
+from users.schemas import UserInDB
+from config.base import settings
 
 redis = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=0)
 
@@ -25,11 +25,9 @@ def fetch_post_from_cache(db: Session, post_id: int) -> dict | JSONResponse:
     else:
         post_from_db = fetch_one_post(db=db, post_id=post_id)
         if post_from_db:
-            post_from_db['like_user'] = ''
-            post_from_db['dislike_user'] = ''
             try:
                 redis.hset(post_from_db['id'], mapping=post_from_db)
-                ttl = datetime.timedelta(hours=720)
+                ttl = datetime.timedelta(hours=settings.TTL)
                 redis.expire(post_from_db['id'], time=ttl)
             except RedisError as err:
                 logger.error(err)
@@ -39,7 +37,7 @@ def fetch_post_from_cache(db: Session, post_id: int) -> dict | JSONResponse:
             return JSONResponse(status_code=400, content={'msg': 'Post not exist'})
 
 
-def fetch_posts_from_cache(quantity: int, db: Session) -> dict:
+def fetch_posts_from_cache(quantity: int, db: Session) -> list:
     """Возвращает список постов из кэша"""
     posts_for_response = []
     for i in range(1, quantity + 1):
@@ -52,22 +50,15 @@ def fetch_posts_from_cache(quantity: int, db: Session) -> dict:
 
 
 def change_count_of_users_emotions(db: Session, user: UserInDB, post_id: int, table: str, users: str) -> JSONResponse:
-    """Инкрементирует или декрементирует счетчик лайков в основном кэше"""
+    """Инкрементирует или декрементирует счетчик лайков в основном кэше.
+     Если поста нет в кэше то берет данные из бд"""
     new_req = redis.hgetall(post_id)
     if not new_req:
         single_post = fetch_one_post(db=db, post_id=post_id)
         if not single_post:
             raise HTTPException(status_code=400, detail='Post not exists')
 
-        likes_users = db.query(Likes).filter(Likes.post_id == post_id).all()
-        dislikes_users = db.query(Likes).filter(Likes.post_id == post_id).all()
-        dis_users = [str(i.id) for i in dislikes_users]
-        like_users = [str(i.id) for i in likes_users]
-        single_post['dislike_user'] = ':'.join(dis_users)
-        single_post['like_user'] = ':'.join(like_users)
-
         redis.hset(post_id, mapping=single_post)
-
         ttl = datetime.timedelta(hours=720)
         redis.expire(post_id, time=ttl)
 
@@ -81,6 +72,8 @@ def change_count_of_users_emotions(db: Session, user: UserInDB, post_id: int, ta
         return JSONResponse(status_code=201, content={'msg': 'Change your emotion'})
     else:
         users_list.append(str(user.id))
+        if "" in users_list:
+            users_list.remove("")
         table_data_users = ':'.join(users_list)
         redis.hincrby(post_id, table, 1)
         redis.hset(post_id, users, table_data_users)

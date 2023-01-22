@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from fastapi import Request
 import aiohttp as aiohttp
 
-from db.schemas import UserCreate
+from users.schemas import UserCreate
 
 load_dotenv()
 

@@ -4,15 +4,15 @@ from datetime import timedelta, datetime
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from jose import jwt, JWTError
 from passlib.context import CryptContext
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 from dotenv import load_dotenv
-from db.config import get_db
-from db.models import User
-from jose import jwt, JWTError
 
-from db.schemas import TokenData
+from config.db import get_db
+from users.models import User
+from users.schemas import TokenData
 
 load_dotenv()
 
