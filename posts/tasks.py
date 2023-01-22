@@ -2,16 +2,27 @@ from celery import shared_task
 import redis
 from sqlalchemy import and_
 from starlette.responses import JSONResponse
-from posts.models import Likes, Dislikes
+from redis.exceptions import RedisError
 
+from posts.models import Likes, Dislikes
 from config.db import SessionLocal as db
 from config.base import settings
 
 redis = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=0)
 
 
+@shared_task(bind=True)
+def update_redis(self) -> None:
+    """Таска создается в случае если редис упал и запись лайков идет напрямую в бд.
+    Когда редис поднимется, кэш будет очищен."""
+    try:
+        redis.flushdb()
+    except RedisError as err:
+        raise self.retry(exc=err, max_retries=3, countdown=5)
+
+
 @shared_task(name='update_db')
-def update_db():
+def update_db() -> JSONResponse | None:
     try:
         status = None
         redis_curs = 0

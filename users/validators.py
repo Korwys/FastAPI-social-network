@@ -1,29 +1,25 @@
 import json
 import logging
-import os
 
-from dotenv import load_dotenv
 from fastapi import Request
 import aiohttp as aiohttp
 
 from users.schemas import UserCreate
+from config.base import settings
 
-load_dotenv()
 
 logger = logging.getLogger('app.services.validators')
 
 
 async def clearbit_new_user_score_checker(user_data: UserCreate, request: Request) -> str:
     """Возвращает риск score от clearbit на основе указанного пользователем емейла и его айпи"""
-    url = os.getenv('CLEARBIT_URL')
-    api_key = os.getenv('CLEARBIT_API_KEY')
-    headers = {'Authorization': f'Bearer {api_key}'}
+    headers = {'Authorization': f'Bearer {settings.CLEARBIT_API_KEY}'}
     params = {'email': user_data.email,
               'ip': request.client.host}
 
     async with aiohttp.ClientSession() as session:
         try:
-            async with session.post(url, data=params, headers=headers) as resp:
+            async with session.post(settings.CLEARBIT_URL, data=params, headers=headers) as resp:
                 clearbit_data = await resp.text()
                 clean_data = json.loads(clearbit_data)
                 clearbit_user_risk_level = clean_data['risk']['level']
@@ -34,13 +30,11 @@ async def clearbit_new_user_score_checker(user_data: UserCreate, request: Reques
 
 async def hunter_user_email_checker(user_data: UserCreate) -> str:
     """Возвращает ответ если указанный при регистрации емейл невалидный на основе проверки сервиса Hunter.io"""
-    url = os.getenv('HUNTER_URL')
-    api_key = os.getenv('HUNTER_API_KEY')
-    params = {'email': user_data.email, 'api_key': api_key}
+    params = {'email': user_data.email, 'api_key': settings.HUNTER_API_KEY}
 
     async with aiohttp.ClientSession() as session:
         try:
-            async with session.get(url, params=params) as resp:
+            async with session.get(settings.HUNTER_URL, params=params) as resp:
                 hunter_data = await resp.text()
                 clean_data = json.loads(hunter_data)
                 email_validation_error = clean_data.get('errors')

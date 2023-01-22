@@ -18,8 +18,8 @@ class AppSettings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS: int = 30
 
-    CELERY_BROKER_URL: str = "redis://127.0.0.1:6379/1"
-    CELERY_RESULT_BACKEND: str = "redis://127.0.0.1:6379/1"
+    CELERY_BROKER_URL: str = "redis://127.0.0.1:6380/1"
+    CELERY_RESULT_BACKEND: str = "redis://127.0.0.1:6380/1"
 
     TTL: int = 168  # Дефолтное значение в редисе (1 неделя)
     DAY_SECONDS: int = 86400

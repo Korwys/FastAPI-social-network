@@ -13,6 +13,7 @@ from posts.models import Post, Likes, Dislikes
 from posts.schemas import PostCreate, PostUpdate
 from users.models import User
 from users.schemas import UserInDB
+from posts.tasks import update_redis
 
 logger = logging.getLogger('app.db.crud')
 
@@ -21,7 +22,6 @@ redis = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_respons
 
 def add_new_post_in_db(db: Session, obj_in: PostCreate, user: User) -> Post:
     """Добавляет запись о новом посте"""
-
     obj_in = obj_in.dict()
     obj_in['author'] = user.id
     db_obj = Post(**obj_in)
@@ -82,24 +82,21 @@ def remove_post_from_db(db: Session, post_id: int) -> JSONResponse:
 
 def fetch_one_post(db: Session, post_id: int) -> dict:
     """Забирает и возвращает пост из бд по указанному айди"""
-    try:
-        post_values = select_common_post_data(post_id=post_id, db=db)
-        like_user = select_all_users_with_likes(post_id=post_id, db=db)
-        dislike_user = select_all_users_with_dislikes(post_id=post_id, db=db)
+    post_values = select_common_post_data(post_id=post_id, db=db)
+    like_user = select_all_users_with_likes(post_id=post_id, db=db)
+    dislike_user = select_all_users_with_dislikes(post_id=post_id, db=db)
 
-        if post_values:
-            pid, title, desc, author, dislikes, likes = list(post_values)
-            post = {"id": pid,
-                    'title': title,
-                    'description': desc,
-                    'author': author,
-                    'likes': likes,
-                    'dislikes': dislikes,
-                    'like_user': like_user,
-                    'dislike_user': dislike_user}
-            return post
-    except SQLAlchemyError as err:
-        logger.exception(err)
+    if post_values:
+        pid, title, desc, author, dislikes, likes = list(post_values)
+        post = {"id": pid,
+                'title': title,
+                'description': desc,
+                'author': author,
+                'likes': likes,
+                'dislikes': dislikes,
+                'like_user': like_user,
+                'dislike_user': dislike_user}
+        return post
 
 
 def check_post_author(db: Session, post_id: int, user: UserInDB) -> bool:
@@ -112,6 +109,8 @@ def check_post_author(db: Session, post_id: int, user: UserInDB) -> bool:
 
 
 def select_all_users_with_likes(post_id: int, db: Session) -> str:
+    """Возращает строку состоящую из айдишников юзеров, которые поставили лайки,
+    если таковых нет, то вернет пустую строку"""
     list_of_users = db.query(Likes.user).filter(Likes.post_id == post_id).all()
     ended_list = []
     for user_id in list_of_users:
@@ -123,6 +122,8 @@ def select_all_users_with_likes(post_id: int, db: Session) -> str:
 
 
 def select_all_users_with_dislikes(post_id: int, db: Session) -> str:
+    """Возращает строку состоящую из айдишников юзеров, которые поставили дизлайки,
+    если таковых нет, то вернет пустую строку"""
     list_of_users = db.query(Dislikes.user).filter(Dislikes.post_id == post_id).all()
     ended_list = []
     for user_id in list_of_users:
@@ -134,6 +135,7 @@ def select_all_users_with_dislikes(post_id: int, db: Session) -> str:
 
 
 def select_common_post_data(post_id: int, db: Session) -> list:
+    """Возвращает объединенные данные по посту со всех таблиц (Post,Likes,Dislikes)"""
     query = text(f"""
             SELECT posts.id as post_id, posts.title as title, posts.description, posts.author,
             (SELECT COUNT(id) FROM dislikes WHERE post_id ={post_id}) as dislikes,
@@ -144,3 +146,31 @@ def select_common_post_data(post_id: int, db: Session) -> list:
     statement = db.execute(query)
     for i in statement:
         return i
+
+
+def change_emotions_in_db(post_id: int, db: Session, user: UserInDB, model: Likes | Dislikes) -> JSONResponse:
+    """ При падении редиса добавляет/удаляет данные напрямую в бд о лайках/дизлайках.
+    Возвращает код 201 и  количество лайков/дизлайков после изменения"""
+    db_emotions = db.query(model).where(model.post_id == post_id).all()
+    list_of_emotions_users_from_db = [i.user for i in db_emotions]
+    if user.id not in list_of_emotions_users_from_db:
+        obj_in = {'post_id': post_id, 'user': user.id}
+        db_obj = model(**obj_in)
+        try:
+            db.add(db_obj)
+            db.commit()
+        except SQLAlchemyError as err:
+            logger.exception(err)
+        update_redis.delay()
+        emotions_value = db.query(model).filter(model.post_id == post_id).count()
+        return JSONResponse(status_code=201, content={model.__tablename__: emotions_value})
+    else:
+        try:
+            obj = delete(model).where(and_(model.post_id == post_id, model.user == user.id))
+            db.execute(obj)
+            db.commit()
+        except SQLAlchemyError as err:
+            logger.exception(err)
+        update_redis.delay()
+        em_value = db.query(model).filter(model.post_id == post_id).count()
+        return JSONResponse(status_code=201, content={model.__tablename__: em_value})

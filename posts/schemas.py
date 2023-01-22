@@ -6,7 +6,7 @@ class PostBase(BaseModel):
     description: str
 
     @validator('title')
-    def check_title(cls, value: str):
+    def check_title(cls, value: str) -> str:
         """Валидация заголовка поста. Требования: длина более 0, но не более 150 знаков"""
         if len(value.strip()) == 0:
             raise ValueError('Title must contains letters or/and digits but not only spaces.')
@@ -16,7 +16,7 @@ class PostBase(BaseModel):
             return value
 
     @validator('description')
-    def check_description(cls, value):
+    def check_description(cls, value: str) -> str:
         """Валидация описания. Требования: длина более 0, но не более 5000 знаков"""
         if len(value.strip()) == 0:
             raise ValueError('Description must contains letters or/and digits, but not only spaces.')

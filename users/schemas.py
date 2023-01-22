@@ -13,7 +13,7 @@ class UserCreate(UserBase):
 
     @validator('username')
     def check_username(cls, value: str) -> str:
-        """Вадиладация логина. Логин должен содержать буквы и/или цифры. Длина от 5 до 15 символов."""
+        """Валидация логина. Логин должен содержать буквы и/или цифры. Длина от 5 до 15 символов."""
 
         pattern_username = re.compile(r'^[A-Za-z0-9]{4,15}$')
 

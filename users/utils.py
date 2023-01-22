@@ -8,13 +8,11 @@ from jose import jwt, JWTError
 from passlib.context import CryptContext
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
-from dotenv import load_dotenv
 
 from config.db import get_db
 from users.models import User
 from users.schemas import TokenData
-
-load_dotenv()
+from config.base import settings
 
 logger = logging.getLogger('app.services.auth')
 
@@ -48,11 +46,11 @@ def get_user_hashed_password_from_db(username: int, db: Session = Depends(get_db
 def create_token(sub: str):
     """Создает JWT токен"""
     token_type = "access_token"
-    lifetime = timedelta(minutes=int(os.getenv('ACCESS')))
+    lifetime = timedelta(minutes=int(settings.ACCESS))
     payload = {'token': token_type, 'exp': datetime.now() + lifetime, 'sub': sub}
 
     try:
-        return jwt.encode(payload, os.getenv('SECRET'), os.getenv('ALGORITHM'))
+        return jwt.encode(payload, settings.SECRET, settings.ALGORITHM)
     except JWTError as err:
         logger.exception(err)
 
@@ -66,7 +64,7 @@ def get_current_user(db: Session = Depends(get_db), token: str = Depends(oauth2_
     )
 
     try:
-        payload = jwt.decode(token, os.getenv('SECRET'), algorithms=[os.getenv('ALGORITHM')])
+        payload = jwt.decode(token, settings.SECRET, algorithms=[settings.ALGORITHM])
         username = payload.get('sub')
         if username is None:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='Could not validate credentials')

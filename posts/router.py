@@ -6,7 +6,7 @@ from starlette.responses import JSONResponse
 
 from config.db import get_db
 from posts.cache import fetch_posts_from_cache, fetch_post_from_cache, change_count_of_users_emotions
-from posts.models import Post
+from posts.models import Post, Likes, Dislikes
 from posts.schemas import PostInDB, PostCreate, PostUpdate
 from posts.services import add_new_post_in_db, update_post, remove_post_from_db, check_post_author
 from users.schemas import UserInDB
@@ -39,6 +39,7 @@ def edit_post(post_id: int, obj_in: PostUpdate, db: Session = Depends(get_db)
     else:
         raise HTTPException(status_code=400, detail="You can't edit this post. Permission denied.")
 
+
 @post_router.delete('/{post_id}', response_model=PostInDB, status_code=status.HTTP_200_OK)
 def delete_post(post_id: int, db: Session = Depends(get_db),
                 user: UserInDB = Depends(get_current_user)) -> JSONResponse:
@@ -52,7 +53,7 @@ def delete_post(post_id: int, db: Session = Depends(get_db),
 def add_or_remove_like(post_id: int, db: Session = Depends(get_db),
                        user: UserInDB = Depends(get_current_user)) -> JSONResponse:
     if not check_post_author(db, post_id, user):
-        return change_count_of_users_emotions(db=db, user=user, post_id=post_id, table='likes', users='like_user')
+        return change_count_of_users_emotions(db=db, user=user, post_id=post_id, users='like_user',model=Likes)
     else:
         raise HTTPException(status_code=400, detail="You can't like or dislike your own posts")
 
@@ -61,6 +62,6 @@ def add_or_remove_like(post_id: int, db: Session = Depends(get_db),
 def add_or_remove_dislike(post_id: int, db: Session = Depends(get_db),
                           user: UserInDB = Depends(get_current_user)) -> JSONResponse:
     if not check_post_author(db, post_id, user):
-        return change_count_of_users_emotions(db=db, user=user, post_id=post_id, table='dislikes', users='dislike_user')
+        return change_count_of_users_emotions(db=db, user=user, post_id=post_id,users='dislike_user',model=Dislikes)
     else:
         raise HTTPException(status_code=400, detail="You can't like or dislike your own posts")
