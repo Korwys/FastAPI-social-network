@@ -23,5 +23,5 @@ logging.config.dictConfig(json.load(config_file))
 app.include_router(user_router, tags=['users'], prefix='/api/users')
 app.include_router(post_router, tags=['posts'], prefix='/api/posts')
 
-if __name__ == '__main__':
-    uvicorn.run(app, host='127.0.0.1', port=8000)
+# if __name__ == '__main__':
+#     uvicorn.run(app, host='0.0.0.0', port=8000)

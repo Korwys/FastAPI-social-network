@@ -7,7 +7,6 @@ import aiohttp as aiohttp
 from users.schemas import UserCreate
 from config.base import settings
 
-
 logger = logging.getLogger('app.services.validators')
 
 
@@ -15,7 +14,7 @@ async def clearbit_new_user_score_checker(user_data: UserCreate, request: Reques
     """Возвращает риск score от clearbit на основе указанного пользователем емейла и его айпи"""
     headers = {'Authorization': f'Bearer {settings.CLEARBIT_API_KEY}'}
     params = {'email': user_data.email,
-              'ip': request.client.host}
+              'ip': '127.0.0.1'}
 
     async with aiohttp.ClientSession() as session:
         try:

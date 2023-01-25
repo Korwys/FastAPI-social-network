@@ -1,5 +1,4 @@
 import logging
-import os
 from datetime import timedelta, datetime
 
 from fastapi import Depends, HTTPException, status

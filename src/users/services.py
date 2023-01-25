@@ -1,6 +1,5 @@
 import logging
 
-import redis as redis
 from fastapi import HTTPException, Request
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
@@ -12,8 +11,6 @@ from users.utils import create_hashed_user_password
 from users.validators import clearbit_new_user_score_checker, hunter_user_email_checker
 
 logger = logging.getLogger('app.db.crud')
-
-redis = redis.Redis(host='localhost', port=6379, charset="utf-8", decode_responses=True, db=0)
 
 
 async def add_new_user_in_db(db: Session, obj_in: UserCreate, request: Request) -> User:
