@@ -28,6 +28,7 @@ def update_redis(self) -> None:
 
 @shared_task(name='update_db')
 def update_db() -> None:
+    """Запускается раз в сутки и синхронизирует данные по лайкам/дизлайкам с основной бд"""
     all_keys = get_all_keys_from_cache()
     posts_for_update = get_posts_for_update(all_keys=all_keys)
     update_post_with_like(posts_for_update=posts_for_update)
