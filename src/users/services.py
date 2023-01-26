@@ -10,7 +10,7 @@ from users.schemas import UserCreate
 from users.utils import create_hashed_user_password
 from users.validators import clearbit_new_user_score_checker, hunter_user_email_checker
 
-logger = logging.getLogger('app.db.crud')
+logger = logging.getLogger('app.users.services')
 
 
 async def add_new_user_in_db(db: Session, obj_in: UserCreate, request: Request) -> User:

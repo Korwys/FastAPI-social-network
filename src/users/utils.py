@@ -13,7 +13,7 @@ from users.models import User
 from users.schemas import TokenData
 from config.base import settings
 
-logger = logging.getLogger('app.services.auth')
+logger = logging.getLogger('app.users.utils')
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="api/users/login")

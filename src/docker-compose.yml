@@ -10,60 +10,58 @@ services:
     image: fastapi-image
     command: /start
     depends_on:
-     - redis-cache
-     - redis-celery
+      - redis-cache
+      - redis-celery
     volumes:
       - .:/app
       - /app/logs
 
   redis-celery:
     image: redis:7-alpine
-    container_name: cache_container
-#    restart: always
+    container_name: redis-celery
     ports:
-      - '6379:6379'
-#    command: redis-server --save 20 1 --loglevel warning
-#
-#
+      - "6379:6379"
+
   redis-cache:
     image: redis:7-alpine
-    container_name: broker_container
-#    restart: always
+    container_name: redis-cache
+    command: --port 6380
     ports:
-      - '6380:6379'
-#    command: redis-server --save 20 1 --loglevel warning
+      - "6380:6380"
+    expose:
+      - "6380"
 
   celery_worker:
     build:
       context: .
       dockerfile: Dockerfile
-    image: fastapi_celery_example_celery_worker
+    image: celery_worker
     command: /start-celeryworker
     volumes:
       - .:/app
     env_file:
       - .env
     depends_on:
-      - redis-cache
+      - redis-celery
 
   celery_beat:
     build:
       context: .
       dockerfile: Dockerfile
-    image: fastapi_celery_example_celery_beat
+    image: celery_beat
     command: /start-celerybeat
     volumes:
       - .:/app
     env_file:
       - .env
     depends_on:
-      - redis-cache
+      - redis-celery
 
   flower:
     build:
       context: .
       dockerfile: Dockerfile
-    image: fastapi_celery_example_celery_flower
+    image: celery_flower
     command: /start-flower
     volumes:
       - .:/app
@@ -72,52 +70,4 @@ services:
     ports:
       - 5557:5555
     depends_on:
-      - redis-cache
-
-#  celery_worker:
-#    command: sh -c "celery -A main.celery worker -l info"
-#    container_name: celery_worker
-#    depends_on:
-#      - fastapi
-#      - redis-celery
-#    image: fastapi-image
-#    restart: on-failure
-
-#  celery_worker:
-#    build:
-#      context: .
-#      dockerfile: .Dockerfile
-#    command: celery -A main.celery worker --loglevel=info
-#    volumes:
-#      - .:/app
-#    env_file:
-#      - .env
-#    links:
-#      - redis-celery
-#    depends_on:
-#      - redis-celery
-
-#  celery_beat:
-#    build: .
-#    command: celery -A main.celery beat -l info
-#    volumes:
-#      - .:/app
-##    env_file:
-##      - .env
-#    depends_on:
-#      - redis-cache
-#      - redis-celery
-#      - celery_worker
-#
-#  celery-flower:
-#    build: .
-#    command: celery -A main.celery flower --port=5555
-#    volumes:
-#      - .:/app
-##    env_file:
-##      - .env
-#    ports:
-#      - 5555:5555
-#    depends_on:
-#      - redis-celery
-#      - celery_worker
+      - redis-celery

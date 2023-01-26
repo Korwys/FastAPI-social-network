@@ -15,7 +15,7 @@ from users.schemas import UserInDB
 from config.base import manager
 
 redis = manager.redis
-logger = logging.getLogger('app.db.crud')
+logger = logging.getLogger('app.posts.services')
 
 
 def add_new_post_in_db(db: Session, obj_in: PostCreate, user: User) -> Post:

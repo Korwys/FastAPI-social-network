@@ -13,7 +13,7 @@ from users.schemas import UserInDB
 from config.base import manager
 
 redis = manager.redis
-logger = logging.getLogger('app.services.cache')
+logger = logging.getLogger('app.posts.cache')
 
 
 def fetch_post_from_cache(db: Session, post_id: int) -> dict | JSONResponse:

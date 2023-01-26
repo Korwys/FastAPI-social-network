@@ -7,7 +7,7 @@ import aiohttp as aiohttp
 from users.schemas import UserCreate
 from config.base import settings
 
-logger = logging.getLogger('app.services.validators')
+logger = logging.getLogger('app.users.validators')
 
 
 async def clearbit_new_user_score_checker(user_data: UserCreate, request: Request) -> str:
