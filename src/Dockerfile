@@ -26,7 +26,3 @@ RUN chmod +x /start-celerybeat
 COPY ./config/compose/flower /start-flower
 RUN sed -i 's/\r$//g' /start-flower
 RUN chmod +x /start-flower
-
-#EXPOSE 8000
-
-#CMD ["python3", "main.py"]
